@@ -1,22 +1,22 @@
 package xin.galois.lang.builtin;
 
-import xin.galois.lang.Env;
-import xin.galois.lang.Galois;
-import xin.galois.lang.Functor;
-
 import java.util.List;
+
+import xin.galois.lang.Env;
+import xin.galois.lang.Functor;
+import xin.galois.lang.Galois;
 
 /**
  * 基本的数学运算
- *
+ * <p>
  * (+ 1 2)
  * (- 1 2)
  * (* 1 2)
  * (/ 1 2)
  * (% 1 2)
- *
+ * <p>
  * todo
- *
+ * <p>
  * (sqrt 1 2)
  * (log2 1 2)
  * (log10 1 2)
@@ -31,9 +31,19 @@ public class BasicMathOp {
     public static class AddOp implements Functor {
         @Override
         public Object call(String operator, List<Object> params, Env env, Galois galois) {
-            double sum = 0;
+
+            Number sum = 0;
+
             for (Object param : params) {
-                sum += ((Number) param).doubleValue();
+
+                final Number value = asNum(param, galois);
+
+                if (param instanceof Integer && sum instanceof Integer) {
+                    sum = sum.intValue() + value.intValue();
+                    continue;
+                }
+
+                sum = sum.doubleValue() + value.doubleValue();
             }
 
             return sum;
@@ -43,30 +53,60 @@ public class BasicMathOp {
     public static class MinusOp implements Functor {
         @Override
         public Object call(String operator, List<Object> params, Env env, Galois galois) {
-            double sum = 0;
 
-            if (params.size() == 1) {
-                return -((Number) params.get(0)).doubleValue();
+            if (params.isEmpty()) {
+                return 0;
             }
 
-            if (params.size() > 0) {
-                sum = ((Number) params.get(0)).doubleValue();
+            if (params.size() == 1) {
+
+                final Number value = asNum(params.get(0), galois);
+
+                if (value instanceof Integer) {
+                    return -1 * value.intValue();
+                }
+
+                return -1 * value.doubleValue();
+            }
+
+            final Number value = asNum(params.get(0), galois);
+
+            Number result;
+            if (value instanceof Integer) {
+                result = value.intValue();
+            } else {
+                result = value.doubleValue();
             }
 
             for (int i = 1; i < params.size(); i++) {
-                sum -= ((Number) params.get(i)).doubleValue();
+                final Number num = asNum(params.get(i), galois);
+
+                if (result instanceof Integer && num instanceof Integer) {
+                    result = result.intValue() - num.intValue();
+                    continue;
+                }
+
+                result = result.doubleValue() - num.doubleValue();
             }
 
-            return sum;
+            return result;
         }
     }
 
     public static class MultiOp implements Functor {
         @Override
         public Object call(String operator, List<Object> params, Env env, Galois galois) {
-            double result = 1;
+
+            Number result = 1;
             for (Object param : params) {
-                result *= ((Number) param).doubleValue();
+                final Number num = asNum(param, galois);
+
+                if (result instanceof Integer && num instanceof Integer) {
+                    result = result.intValue() * num.intValue();
+                    continue;
+                }
+
+                result = result.doubleValue() * num.doubleValue();
             }
 
             return result;
@@ -79,10 +119,12 @@ public class BasicMathOp {
 
             galois.assertTrue(params.size() >= 2, "/ operator need at least 2 args, but given: " + params);
 
-            double result = ((Number) params.get(0)).doubleValue();
+            final Number num = asNum(params.get(0), galois);
+            Number result = num instanceof Integer ? num.intValue() : num.doubleValue();
 
             for (int i = 1; i < params.size(); i++) {
-                result /= ((Number) params.get(i)).doubleValue();
+                final Number value = asNum(params.get(i), galois);
+                result = result.doubleValue() / value.doubleValue();
             }
 
             return result;
@@ -95,13 +137,31 @@ public class BasicMathOp {
 
             galois.assertTrue(params.size() >= 2, "% operator need at least 2 args, but given: " + params);
 
-            int remind = (Integer) params.get(0);
+            int remind = asInt(params.get(0), galois);
 
             for (int i = 1; i < params.size(); i++) {
-                remind %= (Integer) params.get(i);
+                remind %= asInt(params.get(i), galois);
             }
 
             return remind;
+        }
+    }
+
+    private static Number asNum(Object obj, Galois galois) {
+        try {
+            return ((Number) obj);
+        } catch (Exception e) {
+            galois.fatal("math op only accept number, bug given: " + obj, e);
+            throw new AssertionError("impossible");
+        }
+    }
+
+    private static Integer asInt(Object obj, Galois galois) {
+        try {
+            return ((Integer) obj);
+        } catch (Exception e) {
+            galois.fatal("mod op only accept int, bug given: " + obj, e);
+            throw new AssertionError("impossible");
         }
     }
 }

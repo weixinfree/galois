@@ -103,14 +103,9 @@ public class GaloisTest {
     }
 
     @Test
-    public void test_bool_ab() throws Exception {
-        Galois.evalS("1");
-    }
-
-    @Test(timeout = 20)
     public void test_bool_atom() throws Exception {
         assertEquals(Galois.evalS("true"), Boolean.TRUE);
-        assertEquals(Galois.evalS("true"), Boolean.TRUE);
+        assertEquals(Galois.evalS("false"), Boolean.FALSE);
     }
 
     @Test
@@ -137,61 +132,52 @@ public class GaloisTest {
         assertEquals(Galois.evalS("''"), "");
         assertEquals(Galois.evalS("'Hello World'"), "Hello World");
         assertEquals(Galois.evalS("'Hello World'"), "Hello World");
+        assertEquals(Galois.evalS("'这是😄'"), "这是😄");
+        assertEquals(Galois.evalS("'这是\t'"), "这是\t");
         // TODO-wei: 2018/5/7 转义字符
-        // TODO-wei: 2018/5/7 unicode  字符
+        // TODO-wei: 2018/5/8 多行字符串
     }
 
     @Test
     public void test_symbol_atom() throws Exception {
-
-        // TODO-wei: 2018/5/7 不支持非 \w
-
-    }
-
-    @Test
-    public void eval_atom() throws Exception {
-
         assertEquals(Galois.evalS(":hello"), "hello");
-        assertEquals(Galois.evalS(":key"), "key");
-        assertEquals(Galois.evalS("'hello world'"), "hello world");
-        assertEquals(Galois.evalS("' 1 '"), " 1 ");
-        assertEquals(Galois.evalS("''"), "");
-
-        assertEquals(Galois.evalS("(true)"), true);
-        assertEquals(Galois.evalS("(1)"), 1);
-        assertEquals(Galois.evalS("(:hello)"), "hello");
+        assertEquals(Galois.evalS(":_hello_"), "_hello_");
+        assertEquals(Galois.evalS(":123"), "123");
     }
 
     @Test(expected = GaloisException.class)
-    public void test_atom1() throws Exception {
-        Galois.evalS(":");
+    public void test_symbol_fail() throws Exception {
+        Galois.evalS(":123-");
     }
 
     @Test
     public void eval_add() throws Exception {
-        assertEquals(Galois.evalS("(+ 3 4)"), 7.0);
-        assertEquals(Galois.evalS("(+ 3)"), 3.0);
-        assertEquals(Galois.evalS("(+)"), 0.0);
-        assertEquals(Galois.evalS("(+ 1 2 3 4)"), 10.0);
-        assertEquals(Galois.evalS("(+ 1 2 3 4 5)"), 15.0);
+        assertEquals(Galois.evalS("(+ 3 4)"), 7);
+        assertEquals(Galois.evalS("(add 3 4)"), 7);
+        assertEquals(Galois.evalS("(add)"), 0);
+        assertEquals(Galois.evalS("(+ 3 4.0)"), 7.0);
+        assertEquals(Galois.evalS("(+ 3)"), 3);
+        assertEquals(Galois.evalS("(+)"), 0);
+        assertEquals(Galois.evalS("(+ 1 2 3 4)"), 10);
+        assertEquals(Galois.evalS("(+ 1 2 3 4 5)"), 15);
     }
 
     @Test
     public void test_minus() throws Exception {
-        assertEquals(Galois.evalS("(- 3 4)"), -1.0);
-        assertEquals(Galois.evalS("(-)"), 0.0);
-        assertEquals(Galois.evalS("(- 1)"), -1.0);
-        assertEquals(Galois.evalS("(- 3 4)"), -1.0);
-        assertEquals(Galois.evalS("(- 10 1 1 2)"), 6.0);
+        assertEquals(Galois.evalS("(- 3 4)"), -1);
+        assertEquals(Galois.evalS("(-)"), 0);
+        assertEquals(Galois.evalS("(- 1)"), -1);
+        assertEquals(Galois.evalS("(- 3 4)"), -1);
+        assertEquals(Galois.evalS("(- 10 1 1 2)"), 6);
     }
 
     @Test
     public void test_multi() throws Exception {
-        assertEquals(Galois.evalS("(*)"), 1.0);
-        assertEquals(Galois.evalS("(* 1)"), 1.0);
-        assertEquals(Galois.evalS("(* 2)"), 2.0);
-        assertEquals(Galois.evalS("(* 10 2)"), 20.0);
-        assertEquals(Galois.evalS("(* 10 10 10 3)"), 3000.0);
+        assertEquals(Galois.evalS("(*)"), 1);
+        assertEquals(Galois.evalS("(* 1)"), 1);
+        assertEquals(Galois.evalS("(* 2)"), 2);
+        assertEquals(Galois.evalS("(* 10 2)"), 20);
+        assertEquals(Galois.evalS("(* 10 10 10 3)"), 3000);
     }
 
     @Test(expected = GaloisException.class)
@@ -229,7 +215,7 @@ public class GaloisTest {
         assertEquals(Galois.evalS("(% 10 3 2)"), 1);
     }
 
-    @Test(expected = ClassCastException.class)
+    @Test(expected = GaloisException.class)
     public void test_mod1() throws Exception {
         assertEquals(Galois.evalS("(% 10.01 3.0)"), 1);
     }
@@ -628,10 +614,10 @@ public class GaloisTest {
 
     @Test
     public void test_fn() throws Exception {
-        assertEquals(Galois.evalS("(do (fn add (x y) (+ x y)) (add 1 2))"), 3.0);
+        assertEquals(Galois.evalS("(do (fn add (x y) (+ x y)) (add 1 2))"), 3);
         assertEquals(Galois.evalS("(do (fn add () (3)) (add))"), 3);
         assertEquals(Galois.evalS("(do (fn add (x y) (int (+ x y))) (add 1 2))"), 3);
-        assertEquals(Galois.evalS("(do (let z 10) (fn add (x y) (+ x y z)) (add 1 2))"), 13.0);
+        assertEquals(Galois.evalS("(do (let z 10) (fn add (x y) (+ x y z)) (add 1 2))"), 13);
     }
 
     @Test(expected = GaloisException.class)
@@ -731,7 +717,7 @@ public class GaloisTest {
 
     @Test
     public void test_record() throws Exception {
-        assertEquals(Galois.evalS("(record User (name age sex))"), new Record("User", "(name age sex)"));
+//        assertEquals(Galois.evalS("(record User (name age sex))"), new Record("User", "(name age sex)"));
         assertEquals(Galois.evalS("(do " +
                 "(record User (name age sex)) " +
                 "(let xm " +

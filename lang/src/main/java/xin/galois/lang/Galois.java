@@ -1,7 +1,5 @@
 package xin.galois.lang;
 
-import android.support.annotation.NonNull;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,7 +12,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import xin.galois.lang.atom.AbsRegexAtom;
+import xin.galois.lang.atom.Atom;
 import xin.galois.lang.builtin.BasicBoolOp;
 import xin.galois.lang.internal.StringIterable;
 
@@ -43,6 +45,7 @@ public class Galois {
     // TODO-wei: 2018/5/6 文档
     // TODO-wei: 2018/5/7 选择开源证书
     // TODO-wei: 2018/5/7 字符串不支持转义 \'
+    // TODO-wei: 2018/5/8 ast 裁剪
 
     ///////////////////////////////////////////////////////////////////////////
     // static
@@ -134,7 +137,9 @@ public class Galois {
             this.index = 0;
             this.lineEndMark = new ArrayList<>();
 
-            return evalInternal();
+            final Object result = evalInternal();
+            assertTrue(index == se.length(), "syntax error, eval finished, but not cost all code");
+            return result;
         }
     }
 
@@ -151,7 +156,9 @@ public class Galois {
             this.se = se;
             this.index = 0;
             this.lineEndMark = new ArrayList<>();
-            return evalInternal();
+            final Object result = evalInternal();
+            assertTrue(index == se.length(), "syntax error, eval finished, but not cost all code");
+            return result;
         } finally {
 
             if (newEnv) {
@@ -197,9 +204,11 @@ public class Galois {
         } else {
             // atom
 
-            final String atom = consume_atom();
             consume_whitespace();
-            return eval_atom(atom);
+            final Object atom = eval_atom();
+            consume_whitespace();
+
+            return atom;
         }
     }
 
@@ -217,47 +226,59 @@ public class Galois {
     }
 
     private Object eval_if() {
-        final String bool = consume_sexpr_or_atom();
+        final Object _test = consume_sexpr_or_atom();
         consume_whitespace();
-        final String ifTrue = consume_sexpr_or_atom();
+        final Object _ifTrue = consume_sexpr_or_atom();
         consume_whitespace();
-        final String ifFalse = consume_sexpr_or_atom();
+        final Object _ifFalse = consume_sexpr_or_atom();
         consume_whitespace();
         consume(')');
 
-        if (bool.isEmpty()
-                || ifTrue.isEmpty()
-                || ifFalse.isEmpty()) {
-            return fatal("wrong if syntax: <(if bool (trueAction) (falseAction))>");
+
+        final Object test;
+        if (isValidSExpr(_test)) {
+            return temp_eval(((String) _test), false);
+        } else {
+            test = _test;
         }
 
-        if (BasicBoolOp.bool(temp_eval(bool, false))) {
-            return temp_eval(ifTrue, true);
+        if (BasicBoolOp.bool(test)) {
+
+            if (isValidSExpr(_ifTrue)) {
+                return temp_eval(((String) _ifTrue), true);
+            }
+
+            return _ifTrue;
+
         } else {
-            return temp_eval(ifFalse, true);
+
+            if (isValidSExpr(_ifFalse)) {
+                return temp_eval(((String) _ifFalse), true);
+            }
+
+            return _ifFalse;
         }
     }
 
     private Object eval_iter() {
-        final String _iterable = consume_sexpr_or_atom();
+        final Object _iterable = consume_sexpr_or_atom();
         consume_whitespace();
-        final String _action = consume_sexpr_or_atom();
+        final String _action = consume_sexpr();
         consume_whitespace();
         consume(')');
 
-        if (_iterable.isEmpty() || _action.isEmpty()) {
+        if (_action.isEmpty()) {
             return fatal("wrong iter syntax: <(iter iterable (action))>");
         }
 
-        final Iterable iterable = toIterable(temp_eval(_iterable, false));
+        final Object iter = isValidSExpr(_iterable) ? temp_eval(((String) _iterable), false) : _iterable;
 
         env.pushNewEnv();
 
         Object result = None;
-
         try {
             int index = 0;
-            for (Object item : iterable) {
+            for (Object item : toIterable(iter)) {
 
                 env.set("$index", index);
                 env.set("$it", item);
@@ -340,6 +361,7 @@ public class Galois {
             consume_whitespace();
         }
         consume(')');
+        consume(')');
 
         final Functor recordMaker = operators.get(record);
         return recordMaker.call(record, values, env, this);
@@ -348,24 +370,26 @@ public class Galois {
     private Object eval_let() {
         final String _var = consume_sexpr_or_word();
         consume_whitespace();
-        final String _value = consume_sexpr_or_atom();
+        final Object _value = consume_sexpr_or_atom();
         consume_whitespace();
         consume(')');
 
-        if (_var.isEmpty() || _value.isEmpty()) {
-            return fatal("wrong let syntax: <(let name value)>");
-        }
-
         final String var = isValidSExpr(_var) ? ((String) temp_eval(_var, false)) : _var;
 
+        // TODO-wei: 2018/5/8 check var 定义
         if (KEYWORDS.contains(var)) {
             fatal("can not use keyword as variable name: " + var);
         }
 
-        final Object evaluatedValue = temp_eval(_value, false);
-        env.set(var, evaluatedValue);
+        if (!VAR_PATTERN.matcher(var).matches()) {
+            fatal("var: " + var + " is wrong named!");
+        }
 
-        return evaluatedValue;
+        final Object value = isValidSExpr(_value) ? temp_eval(((String) _value), false) : _value;
+
+        env.set(var, value);
+
+        return value;
     }
 
     private Object eval_do() {
@@ -393,7 +417,7 @@ public class Galois {
         }
 
         if (params.isEmpty()) {
-            return eval_atom(operator);
+            return temp_eval(operator, false);
         }
 
         if (env.contains(operator)) {
@@ -410,29 +434,36 @@ public class Galois {
     // atom
     ///////////////////////////////////////////////////////////////////////////
 
-    private Object eval_atom(String atom) {
+    private Object eval_atom() {
 
         for (Atom eval : atoms) {
-            final Object _atom = eval.evalAtom(atom);
+            final Object _atom = eval.evalAtom(se, index);
             if (_atom != null) {
+                this.index += eval.getStepForward();
                 return _atom;
             }
         }
 
-        return fatal("Unsupported Atom: " + atom);
+        return fatal("Unsupported Atom");
     }
 
+    private static final Pattern VAR_PATTERN = Pattern.compile("([\\w$->*&]+)\\b");
 
-    private class VarAtom implements Atom {
+    private class VarAtom extends AbsRegexAtom {
 
         @Override
-        public Object evalAtom(String atom) {
+        protected Pattern createPattern() {
+            return VAR_PATTERN;
+        }
 
-            try {
-                return env.get(atom);
-            } catch (GaloisException e) {
-                return fatal(e.getMessage());
-            }
+        @Override
+        protected Object handleRegexResult(String se, int index, Matcher matcher) {
+            return env.get(matcher.group(1));
+        }
+
+        @Override
+        public String toString() {
+            return "VarAtom";
         }
     }
 
@@ -446,31 +477,15 @@ public class Galois {
         read_next();
     }
 
-    private String consume_atom() {
-        if (peek_char() == '\'') {
-            return consume_str();
-        }
-
-        return consume_word();
-    }
-
-    @NonNull
-    private String consume_str() {
-        consume('\'');
-        String result = "'" + consume_until('\'');
-        consume('\'');
-        return result;
-    }
-
     private String consume_operator() {
         return consume_word();
     }
 
-    private String consume_sexpr_or_atom() {
+    private Object consume_sexpr_or_atom() {
         if (peek_char() == '(') {
             return consume_sexpr();
         } else {
-            return consume_atom();
+            return eval_atom();
         }
     }
 
@@ -508,19 +523,12 @@ public class Galois {
         return se.substring(start, end);
     }
 
-    private String consume_until(char c) {
-        final int start = this.index;
-        while (this.index < se.length() && c != peek_char()) {
-            read_next();
-        }
-
-        final int end = Math.min(index + 1, se.length());
-        return se.substring(start, end);
-    }
-
     private String consume_word() {
         final StringBuilder result = new StringBuilder();
-        while (index < se.length() && !isEnd(peek_char())) {
+
+        while (index < se.length() &&
+                !isEnd(peek_char())) {
+
             result.append(peek_char());
             read_next();
         }
@@ -596,7 +604,7 @@ public class Galois {
 
     public Object fatal(String msg, Throwable cause) {
         print_diagnose_info(msg);
-        return new GaloisException(msg, cause);
+        throw new GaloisException(msg, cause);
     }
 
     public void dumpEnv() {
@@ -655,7 +663,14 @@ public class Galois {
         }
     }
 
-    private static boolean isValidSExpr(String se) {
+    private static boolean isValidSExpr(Object str) {
+
+        if (!(str instanceof String)) {
+            return false;
+        }
+
+        final String se = (String) str;
+
 
         final boolean isSExpr = se.startsWith("(") && se.endsWith(")");
         if (!isSExpr) {

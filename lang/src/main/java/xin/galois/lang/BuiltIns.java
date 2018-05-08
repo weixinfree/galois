@@ -1,10 +1,16 @@
 package xin.galois.lang;
 
+import xin.galois.lang.atom.FalseAtom;
+import xin.galois.lang.atom.FloatAtom;
+import xin.galois.lang.atom.IntAtom;
+import xin.galois.lang.atom.NoneAtom;
+import xin.galois.lang.atom.StrAtom;
+import xin.galois.lang.atom.SymbolAtom;
+import xin.galois.lang.atom.TrueAtom;
 import xin.galois.lang.builtin.BasicBoolOp;
 import xin.galois.lang.builtin.BasicDataTypesOp;
 import xin.galois.lang.builtin.BasicJavaInterpretiveOp;
 import xin.galois.lang.builtin.BasicMathOp;
-import xin.galois.lang.internal.Atoms;
 
 /**
  * builtin 环境变量
@@ -15,10 +21,15 @@ class BuiltIns {
 
     static void installFunctor(Galois eval) {
         eval.registerFunctor("+", new BasicMathOp.AddOp());
+        eval.registerFunctor("add", new BasicMathOp.AddOp());
         eval.registerFunctor("-", new BasicMathOp.MinusOp());
+        eval.registerFunctor("minus", new BasicMathOp.MinusOp());
         eval.registerFunctor("*", new BasicMathOp.MultiOp());
+        eval.registerFunctor("multi", new BasicMathOp.MultiOp());
         eval.registerFunctor("/", new BasicMathOp.DivideOp());
+        eval.registerFunctor("divide", new BasicMathOp.DivideOp());
         eval.registerFunctor("%", new BasicMathOp.ModOp());
+        eval.registerFunctor("mod", new BasicMathOp.ModOp());
 
         eval.registerFunctor(">", new BasicBoolOp.GTOp());
         eval.registerFunctor(">=", new BasicBoolOp.GEOp());
@@ -56,12 +67,20 @@ class BuiltIns {
     }
 
     static void installAtoms(Galois eval) {
-        eval.registerAtom(new Atoms.NoneAtom());
-        eval.registerAtom(new Atoms.BoolAtom());
-        eval.registerAtom(new Atoms.IntAtom());
-        eval.registerAtom(new Atoms.FloatAtom());
-        eval.registerAtom(new Atoms.StrAtom());
-        eval.registerAtom(new Atoms.SymbolAtom());
+        eval.registerAtom(new NoneAtom());
+
+        eval.registerAtom(new FalseAtom());
+        eval.registerAtom(new TrueAtom());
+
+        eval.registerAtom(new FloatAtom());
+
+        eval.registerAtom(new IntAtom.R2());
+        eval.registerAtom(new IntAtom.R8());
+        eval.registerAtom(new IntAtom.R10());
+        eval.registerAtom(new IntAtom.R16());
+
+        eval.registerAtom(new StrAtom());
+        eval.registerAtom(new SymbolAtom());
     }
 
 }

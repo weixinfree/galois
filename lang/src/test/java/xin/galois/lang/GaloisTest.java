@@ -2,10 +2,6 @@ package xin.galois.lang;
 
 import org.junit.Test;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.Reader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -22,41 +18,139 @@ public class GaloisTest {
     public void test_quickCheck_normal() throws Exception {
         Galois.checkParenthesisMatch("(())");
         Galois.checkParenthesisMatch("atom");
+        Galois.checkParenthesisMatch("1");
     }
 
     @Test(expected = GaloisException.class)
-    public void test_quickCheck() throws Exception {
+    public void test_quickCheck_fail() throws Exception {
         Galois.checkParenthesisMatch("(()");
     }
 
     @Test(expected = GaloisException.class)
-    public void test_quickCheck3() throws Exception {
+    public void test_quickCheck_fail2() throws Exception {
+        Galois.checkParenthesisMatch(")");
+    }
+
+    @Test(expected = GaloisException.class)
+    public void test_quickCheck_fail3() throws Exception {
         Galois.checkParenthesisMatch("((()((()))(()))))))");
     }
 
     @Test(expected = GaloisException.class)
-    public void test_quickCheck4() throws Exception {
+    public void test_quickCheck_fail4() throws Exception {
         Galois.checkParenthesisMatch("(");
     }
 
+    @Test
+    public void test_int_atom() throws Exception {
+        assertEquals(Galois.evalS("1"), 1);
+        assertEquals(Galois.evalS("2"), 2);
+        assertEquals(Galois.evalS("0"), 0);
+        assertEquals(Galois.evalS("-0"), -0);
+        assertEquals(Galois.evalS("+0"), +0);
+        assertEquals(Galois.evalS("+1"), +1);
+        assertEquals(Galois.evalS("-1"), -1);
+        assertEquals(Galois.evalS("-1000"), -1000);
+        assertEquals(Galois.evalS("-123456"), -123456);
+
+        assertEquals(Galois.evalS("0x0"), 0x0);
+        assertEquals(Galois.evalS("-0x0"), -0x0);
+        assertEquals(Galois.evalS("0x1"), 1);
+        assertEquals(Galois.evalS("0xa"), 0xa);
+        assertEquals(Galois.evalS("0x6"), 0x6);
+        assertEquals(Galois.evalS("-0x6"), -0x6);
+        assertEquals(Galois.evalS("0xFF"), 0xFF);
+        assertEquals(Galois.evalS("-0xFF"), -0xFF);
+        assertEquals(Galois.evalS("0x7ff"), 0x7ff);
+        assertEquals(Galois.evalS("-0x7ff"), -0x7ff);
+        assertEquals(Galois.evalS("0x7ac"), 0x7ac);
+        assertEquals(Galois.evalS("-0x7ac"), -0x7ac);
+
+        assertEquals(Galois.evalS("0o114"), 0114);
+        assertEquals(Galois.evalS("-0o114"), -0114);
+        assertEquals(Galois.evalS("0o123"), 0123);
+        assertEquals(Galois.evalS("-0o123"), -0123);
+        assertEquals(Galois.evalS("0o0"), 00);
+        assertEquals(Galois.evalS("-0o0"), -00);
+        assertEquals(Galois.evalS("0o1"), 1);
+        assertEquals(Galois.evalS("0o2347"), 02347);
+
+        assertEquals(Galois.evalS("0b1"), 1);
+        assertEquals(Galois.evalS("-0b1"), -1);
+        assertEquals(Galois.evalS("-0b10101"), -0b10101);
+        assertEquals(Galois.evalS("-0b0"), -0);
+        assertEquals(Galois.evalS("0b0"), 0);
+    }
+
+    @Test(expected = NumberFormatException.class)
+    public void test_int_atom_overflow() throws Exception {
+        Galois.evalS("12345678901234567890");
+    }
+
     @Test(expected = GaloisException.class)
-    public void test_quickCheck2() throws Exception {
-        Galois.checkParenthesisMatch(")");
+    public void test_int_atom_r2_fail() throws Exception {
+        Galois.evalS("0b123");
+    }
+
+    @Test(expected = GaloisException.class)
+    public void test_int_atom_r8_fail() throws Exception {
+        Galois.evalS("0o8");
+    }
+
+    @Test(expected = GaloisException.class)
+    public void test_int_atom_r16_fail() throws Exception {
+        Galois.evalS("0xt");
+    }
+
+    @Test
+    public void test_bool_ab() throws Exception {
+        Galois.evalS("1");
+    }
+
+    @Test(timeout = 20)
+    public void test_bool_atom() throws Exception {
+        assertEquals(Galois.evalS("true"), Boolean.TRUE);
+        assertEquals(Galois.evalS("true"), Boolean.TRUE);
+    }
+
+    @Test
+    public void test_none() throws Exception {
+        assertEquals(Galois.evalS("None"), Galois.None);
+        assertEquals(Galois.None.toString(), "None");
+    }
+
+    @Test
+    public void test_float_atom() throws Exception {
+        assertEquals(Galois.evalS("0.2"), 0.2);
+        assertEquals(Galois.evalS("0.0"), 0.0);
+        assertEquals(Galois.evalS("-0.0"), -0.0);
+        assertEquals(Galois.evalS("0.1"), 0.1);
+        assertEquals(Galois.evalS("-0.1"), -0.1);
+        assertEquals(Galois.evalS("0.111"), 0.111);
+        assertEquals(Galois.evalS("1234.567"), 1234.567);
+        assertEquals(Galois.evalS("-1234.567"), -1234.567);
+    }
+
+    @Test
+    public void test_string_atom() throws Exception {
+        assertEquals(Galois.evalS("'12345'"), "12345");
+        assertEquals(Galois.evalS("''"), "");
+        assertEquals(Galois.evalS("'Hello World'"), "Hello World");
+        assertEquals(Galois.evalS("'Hello World'"), "Hello World");
+        // TODO-wei: 2018/5/7 转义字符
+        // TODO-wei: 2018/5/7 unicode  字符
+    }
+
+    @Test
+    public void test_symbol_atom() throws Exception {
+
+        // TODO-wei: 2018/5/7 不支持非 \w
+
     }
 
     @Test
     public void eval_atom() throws Exception {
-        assertEquals(Galois.evalS("1"), 1);
-        assertEquals(Galois.evalS("true"), true);
-        assertEquals(Galois.evalS("false"), false);
-        assertEquals(Galois.evalS("None"), Galois.None);
 
-        assertEquals(Galois.evalS("-1"), -1);
-        assertEquals(Galois.evalS("-0"), -0);
-        assertEquals(Galois.evalS("0.2"), 0.2);
-        assertEquals(Galois.evalS("-0"), 0);
-        assertEquals(Galois.evalS("1.0"), 1.0);
-        assertEquals(Galois.evalS("-1.0"), -1.0);
         assertEquals(Galois.evalS(":hello"), "hello");
         assertEquals(Galois.evalS(":key"), "key");
         assertEquals(Galois.evalS("'hello world'"), "hello world");
@@ -575,6 +669,21 @@ public class GaloisTest {
 
     }
 
+    @Test
+    public void test_high_order_fn() throws Exception {
+
+    }
+
+    @Test
+    public void test_fn_as_first_class() throws Exception {
+
+    }
+
+    @Test
+    public void test_anonymous_fn() throws Exception {
+
+    }
+
     @Test(expected = GaloisException.class)
     public void test_fn_scope() throws Exception {
         Galois.evalS("(do (fn add (x y) (+ x y)) (add 2 3) x)");
@@ -630,17 +739,33 @@ public class GaloisTest {
                 "(xm :age))"), 10);
     }
 
+    String code = "(do\n" +
+            "    (record User (name age sex weight))\n" +
+            "    (let xm (User ('xm' 10 'male' 62.8)))\n" +
+            "\n" +
+            "    (fn join (li sep)\n" +
+            "        (do\n" +
+            "            (let sb (new StringBuilder))\n" +
+            "            (let last (int (- (len li) 1)))\n" +
+            "            (iter li\n" +
+            "                (do\n" +
+            "                    (. sb :append (str $it))\n" +
+            "                    (if (!= $index last)\n" +
+            "                        (. sb :append sep)\n" +
+            "                        (None))))\n" +
+            "            (let result (str sb))))\n" +
+            "\n" +
+            "    (println (join (list 1 2 3) ','))\n" +
+            "\n" +
+            "    (fn format-user (user)\n" +
+            "        (do\n" +
+            "            (str 'User{' (join (values xm) ', ') '}')))\n" +
+            "\n" +
+            "    (println (format-user xm))\n" +
+            ")";
+
     @Test
     public void test_code_file() throws Exception {
-        final File file = new File("/Users/wangwei/AndroidStudioProjects/Galois/lang/src/test/java/xin/galois/lang/code.gal");
-
-        final char[] chars = new char[1024];
-
-        final Reader reader = new BufferedReader(new FileReader(file));
-        final int count = reader.read(chars);
-        reader.close();
-
-        final String code = new String(chars, 0, count);
         Galois.evalS(code);
     }
 

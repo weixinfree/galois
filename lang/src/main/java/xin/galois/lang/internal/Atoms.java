@@ -32,11 +32,11 @@ public class Atoms {
         public Object evalAtom(String atom) {
 
             if ("true".equals(atom)) {
-                return true;
+                return Boolean.TRUE;
             }
 
             if ("false".equals(atom)) {
-                return false;
+                return Boolean.FALSE;
             }
 
             return null;
@@ -45,14 +45,52 @@ public class Atoms {
 
     public static class IntAtom implements Atom {
 
-        private static final Pattern ATOM_INT = Pattern.compile("[+-]?\\d+");
+        private static final Pattern ATOM_INT = Pattern.compile("([+-])?([0-9]+)");
+        private static final Pattern ATOM_INT_R2 = Pattern.compile("([+-])?0b([01]+)");
+        private static final Pattern ATOM_INT_R8 = Pattern.compile("([+-])?0o([0-7]+)");
+        private static final Pattern ATOM_INT_R16 = Pattern.compile("([+-])?0x([0-9a-fA-F]+)");
 
         @Override
         public Object evalAtom(String atom) {
             if (ATOM_INT.matcher(atom).matches()) {
                 return Integer.parseInt(atom);
             }
+
+            {
+                final Matcher matcher = ATOM_INT_R16.matcher(atom);
+                if (matcher.matches()) {
+                    final int sign = getSign(matcher.group(1));
+                    final String num = matcher.group(2);
+                    return sign * Integer.parseInt(num, 16);
+                }
+            }
+
+            {
+                final Matcher matcher = ATOM_INT_R8.matcher(atom);
+                if (matcher.matches()) {
+                    final int sign = getSign(matcher.group(1));
+                    final String num = matcher.group(2);
+                    return sign * Integer.parseInt(num, 8);
+                }
+            }
+
+            {
+                final Matcher matcher = ATOM_INT_R2.matcher(atom);
+                if (matcher.matches()) {
+                    final int sign = getSign(matcher.group(1));
+                    final String num = matcher.group(2);
+                    return sign * Integer.parseInt(num, 2);
+                }
+            }
             return null;
+        }
+
+        private int getSign(String sign) {
+            if ("-".equals(sign)) {
+                return -1;
+            }
+
+            return 1;
         }
     }
 
@@ -85,7 +123,7 @@ public class Atoms {
 
     public static class SymbolAtom implements Atom {
 
-        private static final Pattern ATOM_SYMBOL = Pattern.compile(":([\\w.]+)");
+        private static final Pattern ATOM_SYMBOL = Pattern.compile(":(\\w+)");
 
         @Override
         public Object evalAtom(String atom) {

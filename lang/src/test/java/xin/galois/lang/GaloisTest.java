@@ -652,12 +652,25 @@ public class GaloisTest {
 
     @Test
     public void test_fn_recur() throws Exception {
+        String code = "(do" +
+                "    (fn fib (x)" +
+                "        (do" +
+                "            (if (< x 2)" +
+                "                1" +
+                "                (+ (fib (- x 1)) (fib (- x 2))))" +
+                "        ))" +
+                "    (fib 2)" +
+                ")";
 
+        final Object result = Galois.evalS(code);
+        System.out.println("result = " + result);
     }
 
     @Test
     public void test_high_order_fn() throws Exception {
+        String code = "(do (fn hr (f x y) (f x y)) (hr + 3 4))";
 
+        assertEquals(Galois.evalS(code), 7);
     }
 
     @Test
@@ -667,7 +680,7 @@ public class GaloisTest {
 
     @Test
     public void test_anonymous_fn() throws Exception {
-
+        Galois.evalS("(fn _ () (3))");
     }
 
     @Test(expected = GaloisException.class)

@@ -90,6 +90,7 @@ public class Galois {
         this.operators = new LinkedHashMap<>();
         BuiltIns.installFunctor(this);
 
+        atoms.add(new OpAtom());
         atoms.add(new VarAtom());
     }
 
@@ -101,6 +102,7 @@ public class Galois {
 
         this.operators = galois.operators;
 
+        atoms.add(new OpAtom());
         atoms.add(new VarAtom());
     }
 
@@ -234,10 +236,9 @@ public class Galois {
         consume_whitespace();
         consume(')');
 
-
         final Object test;
         if (isValidSExpr(_test)) {
-            return temp_eval(((String) _test), false);
+            test = temp_eval(((String) _test), false);
         } else {
             test = _test;
         }
@@ -318,7 +319,6 @@ public class Galois {
         funcDefines.add(fn);
 
         final Fn gFn = new Fn(fn, _params, _body, this);
-
         registerFunctor(fn, gFn);
 
         return gFn;
@@ -467,6 +467,23 @@ public class Galois {
         }
     }
 
+    private class OpAtom extends AbsRegexAtom {
+        @Override
+        protected Pattern createPattern() {
+            return Pattern.compile("([^\\s]+)");
+        }
+
+        @Override
+        protected Object handleRegexResult(String se, int index, Matcher matcher) {
+            return operators.get(matcher.group(1));
+        }
+
+        @Override
+        public String toString() {
+            return "OpAtom";
+        }
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // consume
     ///////////////////////////////////////////////////////////////////////////
@@ -498,7 +515,7 @@ public class Galois {
     }
 
     private String consume_sexpr() {
-        assertTrue(peek_char() == '(', "Internal error");
+        assertTrue(peek_char() == '(', "Internal error, except (");
         final Deque<Character> parenthesis = new ArrayDeque<>();
 
         final int start = index;

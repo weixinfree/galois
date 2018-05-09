@@ -153,22 +153,39 @@ public class GaloisTest {
     @Test
     public void eval_add() throws Exception {
         assertEquals(Galois.evalS("(+ 3 4)"), 7);
+        assertEquals(Galois.evalS("(+ -3 4)"), 1);
+        assertEquals(Galois.evalS("(+ -3 -4)"), -7);
+        assertEquals(Galois.evalS("(+ -3 -4.0)"), -7.0);
         assertEquals(Galois.evalS("(add 3 4)"), 7);
         assertEquals(Galois.evalS("(add)"), 0);
         assertEquals(Galois.evalS("(+ 3 4.0)"), 7.0);
         assertEquals(Galois.evalS("(+ 3)"), 3);
         assertEquals(Galois.evalS("(+)"), 0);
+        assertEquals(Galois.evalS("(+ 0.0)"), 0.0);
         assertEquals(Galois.evalS("(+ 1 2 3 4)"), 10);
         assertEquals(Galois.evalS("(+ 1 2 3 4 5)"), 15);
+    }
+
+    @Test(expected = GaloisException.class)
+    public void test_add_fail() throws Exception {
+        Galois.evalS("(add '1' '2')");
     }
 
     @Test
     public void test_minus() throws Exception {
         assertEquals(Galois.evalS("(- 3 4)"), -1);
+        assertEquals(Galois.evalS("(- 3 0.3)"), 2.7);
         assertEquals(Galois.evalS("(-)"), 0);
         assertEquals(Galois.evalS("(- 1)"), -1);
         assertEquals(Galois.evalS("(- 3 4)"), -1);
         assertEquals(Galois.evalS("(- 10 1 1 2)"), 6);
+        assertEquals(Galois.evalS("(- 10 1 1 2 0.0)"), 6.0);
+    }
+
+    @Test(expected = GaloisException.class)
+    public void test_minus_fail() throws Exception {
+        Galois.evalS("(- '2')");
+        Galois.evalS("(- (new Object))");
     }
 
     @Test
@@ -177,6 +194,8 @@ public class GaloisTest {
         assertEquals(Galois.evalS("(* 1)"), 1);
         assertEquals(Galois.evalS("(* 2)"), 2);
         assertEquals(Galois.evalS("(* 10 2)"), 20);
+        assertEquals(Galois.evalS("(* 10 2.0)"), 20.0);
+        assertEquals(Galois.evalS("(* 10 0.2)"), 2.0);
         assertEquals(Galois.evalS("(* 10 10 10 3)"), 3000);
     }
 
@@ -192,16 +211,27 @@ public class GaloisTest {
 
     @Test
     public void test_divider2() throws Exception {
-        assertEquals(Galois.evalS("(/ 1 1)"), 1.0);
-        assertEquals(Galois.evalS("(/ 1 2)"), 0.5);
-        assertEquals(Galois.evalS("(/ 1 3)"), 1 / 3.0);
-        assertEquals(Galois.evalS("(/ 10 2)"), 10 / 2.0);
-        assertEquals(Galois.evalS("(/ 10 2 5)"), 10 / 2.0 / 5);
+        assertEquals(Galois.evalS("(/ 1 1)"), 1);
+        assertEquals(Galois.evalS("(/ 1 2)"), 1 / 2);
+        assertEquals(Galois.evalS("(/ 1 2.0)"), 1 / 2.0);
+        assertEquals(Galois.evalS("(/ 1 3)"), 1 / 3);
+        assertEquals(Galois.evalS("(/ 10 2)"), 10 / 2);
+        assertEquals(Galois.evalS("(/ 10.0 2)"), 10.0 / 2);
+        assertEquals(Galois.evalS("(/ 10 2 5)"), 10 / 2 / 5);
+        assertEquals(Galois.evalS("(/ 10 2.0 5)"), 10 / 2.0 / 5);
+        assertEquals(Galois.evalS("(/ 10 2 5 4)"), 10 / 2 / 5 / 4);
+        assertEquals(Galois.evalS("(/ 10.0 2.0 5.0 4.0)"), 10.0 / 2.0 / 5.0 / 4.0);
+        assertEquals(Galois.evalS("(/ 10 2)"), 5);
+
+        assertEquals(Galois.evalS("(/ 10 0.0)"), Double.POSITIVE_INFINITY);
+        assertEquals(Galois.evalS("(/ -10 0.0)"), Double.NEGATIVE_INFINITY);
+        assertEquals(Galois.evalS("(/ 0 0.0)"), Double.NaN);
+        assertEquals(Galois.evalS("(/ 0 -0.0)"), Double.NaN);
+        assertEquals(Galois.evalS("(/ -0 0.0)"), Double.NaN);
     }
 
-    @Test
+    @Test(expected = ArithmeticException.class)
     public void test_divide3() throws Exception {
-        assertEquals(Galois.evalS("(/ 10 0)"), Double.POSITIVE_INFINITY);
         assertEquals(Galois.evalS("(/ 0 0)"), Double.NaN);
         assertEquals(Galois.evalS("(/ -0 0)"), Double.NaN);
         assertEquals(Galois.evalS("(/ -10 0)"), Double.NEGATIVE_INFINITY);
@@ -217,6 +247,7 @@ public class GaloisTest {
 
     @Test(expected = GaloisException.class)
     public void test_mod1() throws Exception {
+        assertEquals(Galois.evalS("(% 10.01 3)"), 1);
         assertEquals(Galois.evalS("(% 10.01 3.0)"), 1);
     }
 
@@ -240,6 +271,7 @@ public class GaloisTest {
     @Test
     public void test_compare() throws Exception {
         assertEquals(Galois.evalS("(> 3 0)"), true);
+        assertEquals(Galois.evalS("(> 3 3.0)"), false);
         assertEquals(Galois.evalS("(> 3 0 -1)"), true);
         assertEquals(Galois.evalS("(> 3 0 -1 -10)"), true);
         assertEquals(Galois.evalS("(> 3 10)"), false);
@@ -264,15 +296,11 @@ public class GaloisTest {
         assertEquals(Galois.evalS("(<= 0 0)"), true);
         assertEquals(Galois.evalS("(<= 1 2 3 4 5)"), true);
 
-
         assertEquals(Galois.evalS("(>= 10 9 8 7 6)"), true);
         assertEquals(Galois.evalS("(>= 10 9)"), true);
-    }
 
-    @Test(expected = ClassCastException.class)
-    public void test_compare3() throws Exception {
         assertEquals(Galois.evalS("(>= 10.0 9)"), true);
-        assertEquals(Galois.evalS("(<= 10.0 9)"), true);
+        assertEquals(Galois.evalS("(<= 10.0 9)"), false);
     }
 
     @Test
@@ -289,10 +317,11 @@ public class GaloisTest {
         assertEquals(Galois.evalS("(? '')"), false);
         assertEquals(Galois.evalS("(? 'hello world')"), true);
         assertEquals(Galois.evalS("(? ' ')"), true);
+        assertEquals(Galois.evalS("(? (new Object))"), true);
     }
 
     @Test
-    public void test_str() throws Exception {
+    public void test_str_op() throws Exception {
         assertEquals(Galois.evalS("(str true)"), "true");
         assertEquals(Galois.evalS("(str 1)"), "1");
         assertEquals(Galois.evalS("(str 1.0)"), "1.0");

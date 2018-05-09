@@ -120,10 +120,22 @@ public class BasicMathOp {
             galois.assertTrue(params.size() >= 2, "/ operator need at least 2 args, but given: " + params);
 
             final Number num = asNum(params.get(0), galois);
-            Number result = num instanceof Integer ? num.intValue() : num.doubleValue();
+
+            Number result;
+            if (num instanceof Integer) {
+                result = num.intValue();
+            } else {
+                result = num.doubleValue();
+            }
 
             for (int i = 1; i < params.size(); i++) {
                 final Number value = asNum(params.get(i), galois);
+
+                if (value instanceof Integer && result instanceof Integer) {
+                    result = result.intValue() / value.intValue();
+                    continue;
+                }
+
                 result = result.doubleValue() / value.doubleValue();
             }
 

@@ -1,10 +1,11 @@
 package xin.galois.lang;
 
 /**
- * S表达式求值发生异常
- *
- * Created by wangwei on 2018/5/3.
+ * Galois 相关异常
+ * Created by wangwei on 2018/5/11.
  */
+
+@SuppressWarnings("WeakerAccess")
 public class GaloisException extends RuntimeException {
 
     public GaloisException(String message) {

@@ -1,4 +1,4 @@
-package xin.galois.lang.internal;
+package xin.galois.lang.iternal;
 
 import android.support.annotation.NonNull;
 

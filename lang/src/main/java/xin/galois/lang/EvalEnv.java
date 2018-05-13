@@ -5,15 +5,15 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -26,19 +26,26 @@ import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class Env {
+/**
+ * 求值环境
+ * Created by wangwei on 2018/5/11.
+ */
+@SuppressWarnings("WeakerAccess")
+public class EvalEnv {
 
-    private Deque<Map<String, Object>> envStack = new ArrayDeque<>();
+    private final Deque<Map<String, Object>> envStack;
 
-    private Env(boolean init) {
-        if (init) {
-            pushNewEnv();
-            initialBuiltInEnv();
-        }
+    public EvalEnv(Deque<Map<String, Object>> envStack) {
+        this.envStack = envStack;
     }
 
-    Env() {
-        this(true);
+    public EvalEnv() {
+        envStack = new LinkedList<>();
+        // builtin Env
+        pushEnv();
+        initialBuiltInEnv();
+        // global env
+        pushEnv();
     }
 
     private void initialBuiltInEnv() {
@@ -103,52 +110,60 @@ public class Env {
         }
     }
 
+    @SuppressWarnings("unused")
     public Map<String, Object> globalEnv() {
         return envStack.getFirst();
     }
 
-    public void setGlobal(String key, Object value) {
-        globalEnv().put(key, value);
+    public void let(String var, Object value) {
+        envStack.peek().put(var, value);
     }
 
-    public void pushNewEnv() {
-        envStack.push(new LinkedHashMap<String, Object>());
+    public void set(String var, Object value) {
+        for (Map<String, Object> map : envStack) {
+            if (map.containsKey(var)) {
+                map.put(var, value);
+                return;
+            }
+        }
+
+        let(var, value);
+    }
+
+    public Object get(String var) {
+        for (Map<String, Object> map : envStack) {
+            if (map.containsKey(var)) {
+                return map.get(var);
+            }
+        }
+
+        return Galois.UnDefined;
+    }
+
+    @SuppressWarnings("unused")
+    public Object containsVar(String var) {
+        for (Map<String, Object> map : envStack) {
+            if (map.containsKey(var)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public EvalEnv snapshot() {
+        return new EvalEnv(this.envStack);
+    }
+
+    public void pushEnv() {
+        envStack.push(new HashMap<String, Object>());
     }
 
     public void popEnv() {
         envStack.pop();
     }
 
-    public void set(String key, Object value) {
-        envStack.peek().put(key, value);
-    }
-
-    public Object get(String key) {
-        for (Map<String, Object> _env : envStack) {
-            if (_env.containsKey(key)) {
-                return _env.get(key);
-            }
-        }
-
-        throw new GaloisException("reference undefined variable: " + key);
-    }
-
-    public Env snapshot() {
-        final Env snapshot = new Env(false);
-        // 取当前环境的快照
-        snapshot.envStack = new ArrayDeque<>(this.envStack);
-        return snapshot;
-    }
-
-    public boolean contains(String var) {
-        try {
-            get(var);
-            return true;
-        } catch (GaloisException e) {
-            return false;
-        }
-    }
-
+    @SuppressWarnings("unused")
     public void dump() {
         int level = 0;
         for (Map<String, Object> env : envStack) {
